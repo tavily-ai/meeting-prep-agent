@@ -31,7 +31,7 @@ The project is designed for easy customization and extension, allowing you to:
 
 - **Backend** ([`backend/`](./backend))
   - [`agent.py`](./backend/agent.py): Agentic flow (MCP + LangChain-Tavily ReAct agent)
-- **Frontend** ([`ui/`](./ui)): React-based UI for chat and meeting insights
+- **Frontend** ([`ui/`](./ui)): React-based UI for meeting insights
 - **Server** ([`app.py`](./app.py)): FastAPI server for API endpoints and streaming
 
 ---
