@@ -36,9 +36,8 @@ The project is designed for easy customization and extension, allowing you to:
 
 ---
 
-Architecture of langgraph backend:
 
-![LangGraph Backend Architecture](images/meeting_prep_workflow.png)
+![LangGraph Backend Architecture](images/diagram.svg)
 
 ## 🛠️ Local Setup
 
