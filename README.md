@@ -37,7 +37,7 @@ The project is designed for easy customization and extension, allowing you to:
 ---
 
 
-![LangGraph Backend Architecture](images/diagram.svg)
+![LangGraph Backend Architecture](images/diagram.png)
 
 ## 🛠️ Local Setup
 
