@@ -1,8 +1,9 @@
 # 🗓️ Meeting Prep Agent
 
 <div align="center">
-  <img src="images/meeting-prep-agent.gif" alt="Tavily Chatbot Demo" width="600"/>
+  <video src="images/meeting-prep-agent.mp4" width="600" controls></video>
 </div>
+
 
 ## 👋 Welcome to the Tavily Meeting Prep Agent!
 
@@ -26,6 +27,9 @@ The project is designed for easy customization and extension, allowing you to:
 - ⚡ **Async FastAPI Backend:** High-performance, async-ready backend for fast responses.
 - 💻 **Modern React Frontend:** Interactive UI for dynamic user interactions.
 
+## System Diagram
+![LangGraph Backend Architecture](images/diagram.png)
+
 ---
 ## 📂 Repository Structure
 
@@ -36,8 +40,6 @@ The project is designed for easy customization and extension, allowing you to:
 
 ---
 
-
-![LangGraph Backend Architecture](images/diagram.png)
 
 ## 🛠️ Local Setup
 
