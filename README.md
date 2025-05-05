@@ -1,9 +1,10 @@
 # 🗓️ Meeting Prep Agent
 
 <div align="center">
-  <video src="images/meeting-prep-agent.mp4" width="600" controls></video>
+  <img src="images/meeting-prep-agent.gif" alt="Tavily Chatbot Demo" width="600"/>
 </div>
 
+Download a full demo video by [clicking here](images/meeting-prep-agent.mp4)
 
 ## 👋 Welcome to the Tavily Meeting Prep Agent!
 
