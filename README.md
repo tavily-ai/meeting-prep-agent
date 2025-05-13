@@ -4,6 +4,8 @@
   <img src="images/meeting-prep-agent.gif" alt="Tavily Chatbot Demo" width="600"/>
 </div>
 
+Download a full demo video by [clicking here](images/meeting-prep-agent.mp4)
+
 ## 👋 Welcome to the Tavily Meeting Prep Agent!
 
 This repository demonstrates how to build a meeting preparation agent with real-time web access, leveraging Tavily's advanced search capabilities. This agent will connect to your Google Calendar via MCP, extract meeting information, and use Tavily search for profile research on the meeting attendees and general information on the companies you are meeting with.
@@ -26,19 +28,19 @@ The project is designed for easy customization and extension, allowing you to:
 - ⚡ **Async FastAPI Backend:** High-performance, async-ready backend for fast responses.
 - 💻 **Modern React Frontend:** Interactive UI for dynamic user interactions.
 
+## System Diagram
+![LangGraph Backend Architecture](images/diagram.png)
+
 ---
 ## 📂 Repository Structure
 
 - **Backend** ([`backend/`](./backend))
   - [`agent.py`](./backend/agent.py): Agentic flow (MCP + LangChain-Tavily ReAct agent)
-- **Frontend** ([`ui/`](./ui)): React-based UI for chat and meeting insights
+- **Frontend** ([`ui/`](./ui)): React-based UI for meeting insights
 - **Server** ([`app.py`](./app.py)): FastAPI server for API endpoints and streaming
 
 ---
 
-Architecture of langgraph backend:
-
-![LangGraph Backend Architecture](images/meeting_prep_workflow.png)
 
 ## 🛠️ Local Setup
 
