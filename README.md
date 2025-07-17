@@ -14,7 +14,6 @@ The project is designed for easy customization and extension, allowing you to:
 
 - Integrate proprietary or internal data sources
 - Modify the agent architecture or swap out LLMs
-- Add additional Meeting Coordination Platform (MCP) integrations
 
 ---
 
