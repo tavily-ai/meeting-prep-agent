@@ -17,7 +17,7 @@ jsonpointer==3.0.0
 jsonschema_pydantic==0.6
 langchain==0.3.23
 langchain-community==0.3.21
-langchain-core==0.3.55
+langchain-core==0.3.81
 langchain-mcp-adapters==0.0.9
 langchain-openai==0.3.14
 langchain-tavily==0.1.6
