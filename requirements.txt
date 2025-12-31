@@ -27,7 +27,7 @@ langgraph-checkpoint==2.0.24
 langgraph-prebuilt==0.1.8
 langgraph-sdk==0.1.63
 langsmith==0.3.33
-mcp==1.6.0
+mcp==1.23.0
 mcp-use==1.2.7
 openai==1.75.0
 pydantic==2.11.3
