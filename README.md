@@ -26,6 +26,7 @@ The project is designed for easy customization and extension, allowing you to:
 - 🗓️ **Google Calendar Integration:** (via MCP) Access and analyze your meeting data.
 - ⚡ **Async FastAPI Backend:** High-performance, async-ready backend for fast responses.
 - 💻 **Modern React Frontend:** Interactive UI for dynamic user interactions.
+- 📬 **Email Context (via iGPT):** Adds internal-only email context for meeting prep.
 
 ## System Diagram
 ![LangGraph Backend Architecture](images/diagram.png)
@@ -78,7 +79,7 @@ This file should look like:
 }
 ```
 
-**Install the  MCP:**
+**Install the MCP:**
 ```bash
 cd google-calendar-mcp
 npm install
@@ -90,6 +91,65 @@ GOOGLE_CALENDAR_CONFIG=<absolute-path-to-project>/mcp-use-case/google-calendar-m
 ```
 Run the notebook [`mcp-test.ipynb`](./notebooks/mcp-test.ipynb) to check that your MCP setup is working before proceeding.
 
+### 📬 Extending with Email Context (Optional)
+
+By default, the agent prepares a meeting brief using public web research on attendees and the companies you are meeting with.
+
+To ground the briefing in your *real relationship* with meeting attendees, enable **iGPT**. iGPT retrieves **internal-only context** from your connected email and returns meeting-relevant internal context passed into the **LangGraph** flow.
+
+#### What changes when iGPT is available?
+A typical enriched brief may include:
+- What was last discussed with each attendee (internal threads)
+- Commitments made by either side (and what’s still pending)
+- Open items / unresolved questions
+
+#### How iGPT is used in this agent
+The agent sends company and attendee information (derived from your Google Calendar events) to iGPT and asks it to retrieve relevant prior internal context.
+
+Key rule enforced in the iGPT step:
+- **Internal sources only** (no public web information)
+
+#### Setup using the iGPT Playground (recommended for demos)
+
+You need two things:
+1) **`IGPT_API_KEY`** (created in the Hub)
+2) **`IGPT_USER`** (the `user` value you choose inside the Playground)
+
+#### 1) Create an API key
+- Go to: https://igpt.ai/hub/apikeys/
+- Create a new key (treat this as a secret - do not share it)
+
+#### 2) Connect your inbox (one-time per user)
+You can still connect your email through the Playground, even if you don’t have an iGPT app yet.
+
+1. Open the Playground:
+   - https://igpt.ai/hub/playground/
+2. Go to **Connect Datasource**
+3. Choose a **`user`** value (this is your end-user identifier)
+   - Example for a demo: `demo_user`
+4. Submit the request - the Playground will return an **OAuth link**
+5. Click the OAuth link and complete the login/consent
+6. Indexing will start for that `user`
+
+✅ Important: The `user` value you used in **Connect Datasource** is the same value you must use later when calling iGPT (and what you should place in `IGPT_USER`).
+
+#### 3) Use the same user when querying iGPT
+In the Playground “Ask” screen (e.g. `/v1/recall/ask`) you will see a `user` field.
+That value must match the one you used when connecting the datasource.
+
+#### Add to your `.env`
+Set `IGPT_USER` to the exact same `user` value you used in the Playground:
+
+```env
+IGPT_API_KEY=your-igpt-api-key
+IGPT_USER=your-playground-user-value
+```
+
+**Links**
+
+- API keys: [iGPT Hub - API Keys](https://igpt.ai/hub/apikeys/)
+- Documentation: [iGPT Docs](https://docs.igpt.ai/)
+- Official website: [iGPT](https://www.igpt.ai/)
 
 ### Backend Setup
 
@@ -106,7 +166,7 @@ Run the notebook [`mcp-test.ipynb`](./notebooks/mcp-test.ipynb) to check that yo
     ```bash
     export TAVILY_API_KEY="your-tavily-api-key"
     export OPENAI_API_KEY="your-openai-api-key"
-    export GROQ_API_KEY=<"your-groq-api-key>
+    export GROQ_API_KEY="your-groq-api-key"
     export GOOGLE_CALENDAR_CONFIG="<absolute-path-to-project>/mcp-use-case/google-calendar-mcp/build/index.js"
     ```
 4. Run the backend server:
@@ -126,7 +186,7 @@ Run the notebook [`mcp-test.ipynb`](./notebooks/mcp-test.ipynb) to check that yo
     ```
 3. Start the development server:
     ```bash
-    npm run dev
+    npm run start
     ```
 
 **.env file example:**

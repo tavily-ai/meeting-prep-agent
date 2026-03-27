@@ -5,8 +5,8 @@ from typing import Dict, List
 from typing import Optional as OptionalType
 
 from dotenv import load_dotenv
-from langchain import hub
-from langchain.agents import AgentExecutor, create_react_agent
+from igptai import IGPT
+from langchain.agents import create_agent
 from langchain_core.callbacks.manager import dispatch_custom_event
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
@@ -47,6 +47,7 @@ class State(TypedDict):
     date: str
     calendar_data: str
     calendar_events: List[Dict]
+    igpt_results: str
     react_results: List[str]
     markdown_results: str
 
@@ -63,18 +64,28 @@ class MeetingPlanner:
         self.fast_llm = ChatGroq(
             api_key=os.getenv("GROQ_API_KEY"), model="llama-3.3-70b-versatile"
         )
-        self.react_prompt = hub.pull("hwchase17/react")
+
         self.tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
         self.react_tools = [
             TavilySearch(
                 max_results=3, include_raw_content=True, search_depth="advanced"
             )
         ]
-        self.react_agent = create_react_agent(
-            self.react_llm, self.react_tools, self.react_prompt
+        self.react_agent = create_agent(
+            model=self.react_llm,
+            tools=self.react_tools,
+            system_prompt="You are a helpful assistant that researches meeting attendees and companies to help prepare for meetings.",
         )
-        self.react_agent_executor = AgentExecutor(
-            agent=self.react_agent, tools=self.react_tools, handle_parsing_errors=True
+
+        self.igpt_api_key = os.getenv("IGPT_API_KEY")
+        self.igpt_user = os.getenv("IGPT_USER")
+        self.igpt_quality = os.getenv("IGPT_QUALITY") or "cef-1-normal"
+
+        # iGPT runs only when both API key and user are configured
+        self.igpt = (
+            IGPT(api_key=self.igpt_api_key, user=self.igpt_user)
+            if (self.igpt_api_key and self.igpt_user)
+            else None
         )
 
     async def calendar_node(self, state: State):
@@ -118,14 +129,14 @@ class MeetingPlanner:
         # Define the prompt for extraction
         extraction_prompt = """
         Extract meeting information from the following calendar data:
-        
+
         {calendar_data}
-        
+
         Important context:
         - You work for Tavily, so "Tavily" is your company, not the client company
         - For each meeting, identify the client company name (the company Tavily is meeting with)
         - Only include attendees from the client company (exclude anyone with @tavily.com email)
-        
+
         For each meeting, extract:
         1. The meeting title
         2. The client company name (the external company Tavily is meeting with)
@@ -167,28 +178,104 @@ class MeetingPlanner:
 
                 # Add to event attendees
                 event_data["attendees"][email] = name
+
             dispatch_custom_event(
                 "company_event", f"{company} @ {meeting.meeting_time}"
             )
             calendar_events.append(event_data)
+
         return {"calendar_events": calendar_events}
+
+    def igpt_node(self, state: State):
+        """
+        If iGPT isn't configured or there are no external attendees, skip.
+        Otherwise, fetch internal context from iGPT and pass it to ReAct.
+        """
+
+        if not self.igpt:
+            return {"igpt_results": ""}
+
+        calendar_events = state.get("calendar_events", []) or []
+        if not calendar_events:
+            return {"igpt_results": ""}
+
+        # Only run if there is at least one external attendee
+        has_external = any(
+            isinstance(e, dict) and bool(e.get("attendees"))
+            for e in calendar_events
+        )
+        if not has_external:
+            return {"igpt_results": ""}
+
+        dispatch_custom_event("igpt_status", "Fetching internal context from iGPT...")
+
+        prompt = f"""
+        You are retrieving INTERNAL context only (emails, threads, notes, documents, internal messages).
+        Do NOT use public web information.
+        
+        Meetings:
+        {json.dumps(calendar_events, indent=2)}
+        
+        Task:
+        - For each company and attendee in the meetings above, retrieve any relevant prior internal context.
+        - Focus on: prior conversations, key context, open items, and anything important for meeting prep.
+        - If no internal context exists, say so briefly.
+        
+        Return concise text (no markdown required).
+        """.strip()
+
+        try:
+            res = self.igpt.recall.ask(
+                input=prompt,
+                quality=self.igpt_quality,
+                stream=False,
+            )
+        except Exception as e:
+            logger.warning(f"iGPT failed: {e}")
+            return {"igpt_results": ""}
+
+        if isinstance(res, dict) and res.get("error"):
+            logger.warning(f"iGPT failed: {res.get('error')}")
+            return {"igpt_results": ""}
+
+        if isinstance(res, dict):
+            output = res.get("output") or ""
+            if isinstance(output, (dict, list)):
+                return {"igpt_results": json.dumps(output, indent=2)}
+            return {"igpt_results": str(output)}
+
+        return {"igpt_results": "" if res is None else str(res)}
 
     def react_node(self, state: State):
         """Use react architecture to search for information about the attendees"""
-
         calendar_events = state["calendar_events"]
+        igpt_results = (state.get("igpt_results") or "").strip()
+
         dispatch_custom_event(
             "react_status", "Searching Tavily for Meeting Insights..."
         )
-        # Create a function to process a single event
+
+        igpt_block = ""
+        if igpt_results:
+            igpt_block = f"""
+            Internal context (from iGPT connected datasources):
+            {igpt_results}
+
+            Combine the internal context above with public web research (Tavily search).
+            """.strip()
+
         formatted_prompt = f"""
         Your goal is to help me prepare for an upcoming meeting. 
         You will be provided with the name of a company we are meeting with and a list of attendees.
 
-        meeting information:
+        Meeting information:
         {calendar_events}
 
-        Please find the profile information (e.g. linkedin profile) of the attendees using tavily search.
+        {igpt_block}
+
+        Use Tavily search for:
+        - attendee public profiles (e.g., LinkedIn)
+        - company AI initiatives / public signals
 
         1. Search for the attendees name using all available information such as their email, initials/last name, etc.
         - provide details on the attendees experience, education, and skills, and location
@@ -196,17 +283,22 @@ class MeetingPlanner:
         - it is important you find the profile of all the attendees!
         2. Research the company in the context of AI initiatives using tavily search.
         3. Provide your findings summarized concisely with the relevant links. Do not include anything else in the output.
-        """
+        """.strip()
 
-        result = self.react_agent_executor.invoke({"input": formatted_prompt})
+        result = self.react_agent.invoke(
+            {"messages": [{"role": "user", "content": formatted_prompt}]}
+        )
 
-        return {"react_results": result["output"]}
+        # Extract the final response from the messages
+        final_message = result["messages"][-1]
+        return {"react_results": final_message.content}
 
     def markdown_formatter_node(self, state: State):
         """Format the react results into a markdown string"""
         dispatch_custom_event(
             "markdown_formatter_status", "Formatting Meeting Insights..."
         )
+
         research_results = state["react_results"]
         calendar_events = state["calendar_events"]
 
@@ -232,7 +324,8 @@ class MeetingPlanner:
 
         Format the output as clean, well-structured markdown with clear sections and subsections.
         """
-        print("research results: ", research_results)
+
+        logger.info(f"Research Results: {research_results}")
 
         # Use the LLM to format the results
         formatted_results = self.stream_insights_llm.invoke(
@@ -249,12 +342,16 @@ class MeetingPlanner:
 
         graph_builder.add_node("Google Calendar MCP", self.calendar_node)
         graph_builder.add_node("Calendar Data Parser", self.calendar_parser_node)
+
+        graph_builder.add_node("iGPT", self.igpt_node)
+
         graph_builder.add_node("ReAct", self.react_node)
         graph_builder.add_node("Markdown Formatter", self.markdown_formatter_node)
 
         graph_builder.add_edge(START, "Google Calendar MCP")
         graph_builder.add_edge("Google Calendar MCP", "Calendar Data Parser")
-        graph_builder.add_edge("Calendar Data Parser", "ReAct")
+        graph_builder.add_edge("Calendar Data Parser", "iGPT")
+        graph_builder.add_edge("iGPT", "ReAct")
         graph_builder.add_edge("ReAct", "Markdown Formatter")
         graph_builder.add_edge("Markdown Formatter", END)
 

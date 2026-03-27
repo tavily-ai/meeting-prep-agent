@@ -51,6 +51,7 @@ async def analyze_meetings(request: DateRequest):
                     if event_name in [
                         "calendar_status",
                         "calendar_parser_status",
+                        "igpt_status",
                         "react_status",
                         "markdown_formatter_status",
                         "company_event",
