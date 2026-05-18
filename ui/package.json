@@ -20,7 +20,7 @@
     "@tailwindcss/typography": "^0.5.10",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.35",
+    "postcss": "^8.5.14",
     "tailwindcss": "^3.4.1",
     "vite": "^7.3.2"
   },
